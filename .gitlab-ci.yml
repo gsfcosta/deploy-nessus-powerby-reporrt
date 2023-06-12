@@ -1,0 +1,53 @@
+stages:
+  - build
+  - deploy
+  - deploy_latest
+
+build_job:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - export http_proxy=http://127.0.0.1:3128
+    - export https_proxy=http://127.0.0.1:3128
+    - docker build --build-arg http_proxy=http://127.0.0.1:3128 --build-arg https_proxy=http://127.0.0.1:3128 -t private.registry/nessus/relatorio-powerby:$CI_COMMIT_SHA .
+    - docker push private.registry/nessus/relatorio-powerby:$CI_COMMIT_SHA
+    - docker tag private.registry/nessus/relatorio-powerby:$CI_COMMIT_SHA private.registry/nessus/relatorio-powerby:latest
+    - docker push private.registry/nessus/relatorio-powerby:latest
+  only:
+    changes:
+      - run.py
+      - Dockerfile
+
+deploy_job:
+  stage: deploy
+  image:
+    name: private.registry/bitnami/kubectl:latest
+    entrypoint: ['']
+  script:
+    - export KUBECONFIG=/config.yaml
+    - sed -i "s/IMAGE_TAG/$CI_COMMIT_SHA/g" cronjob.yaml
+    - kubectl apply -f cronjob.yaml
+  only:
+    changes:
+      - run.py
+      - Dockerfile
+
+deploy_latest_job:
+  stage: deploy_latest
+  image:
+    name: private.registry/bitnami/kubectl:latest
+    entrypoint: ['']
+  script:
+    - export KUBECONFIG=/config.yaml
+    - sed -i "s/IMAGE_TAG/latest/g" cronjob.yaml
+    - kubectl apply -f cronjob.yaml
+  rules:
+    - changes:
+        - run.py
+        - Dockerfile
+      when: never
+    - changes:
+        - cronjob.yaml
+

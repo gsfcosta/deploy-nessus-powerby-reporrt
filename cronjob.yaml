@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nessus-relatorio-powerby
+  namespace: integrations
+spec:
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  suspend: false
+  schedule: '0 7 1 * *'  # Define a programação da cronjob (aqui, a cada 5 minutos)
+  jobTemplate:
+    spec:
+      template:
+        spec:   
+          containers:
+            - env:
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_HOST
+                      name: powerby-db
+                      optional: false
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_USER
+                      name: powerby-db
+                      optional: false
+                - name: DB_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_PASS
+                      name: powerby-db
+                      optional: false
+                - name: ACC_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: ACC_KEY
+                      name: nessus-key
+                      optional: false
+                - name: SEC_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: SEC_KEY
+                      name: nessus-key
+                      optional: false
+              image: private.registry/nessus/relatorio-powerby:IMAGE_TAG
+              imagePullPolicy: IfNotPresent
+              name: nessus-relatorio-powerby
+              
+          restartPolicy: OnFailure  # Define a política de reinício da cronjob
